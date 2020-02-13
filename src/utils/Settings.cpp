@@ -1,0 +1,53 @@
+#include "Settings.h"
+
+namespace utils
+{
+bool Settings::valid() const
+{
+    return !telegramToken().isEmpty()
+            && serviceUrl().isValid()
+            && !serviceUrl().isEmpty()
+            && !translationsDir().isEmpty()
+            && !defaultLanguage().isEmpty();
+}
+
+QString const& Settings::telegramToken() const
+{
+    return m_telegramToken;
+}
+
+QUrl const& Settings::serviceUrl() const
+{
+    return m_serviceUrl;
+}
+
+QString const& Settings::translationsDir() const
+{
+    return m_translationsDir;
+}
+
+QString const& Settings::defaultLanguage() const
+{
+    return m_defaultLanguage;
+}
+
+void Settings::setTelegramToken(QString const& telegramToken)
+{
+    m_telegramToken = telegramToken;
+}
+
+void Settings::setServiceUrl(QUrl const& serviceUrl)
+{
+    m_serviceUrl = serviceUrl;
+}
+
+void Settings::setTranslationsDir(QString const& translationsDir)
+{
+    m_translationsDir = translationsDir;
+}
+
+void Settings::setDefaultLanguage(QString const& defaultLanguage)
+{
+    m_defaultLanguage = defaultLanguage;
+}
+}
