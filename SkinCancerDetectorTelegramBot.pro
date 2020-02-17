@@ -8,20 +8,22 @@ CONFIG += file_copies
 DEFINES += QT_DEPRECATED_WARNINGS
 
 
-include(third-party/telegrambot/telegrambotlib-qt.pri)
+include(thirdparty/telegrambot/telegrambotlib-qt.pri)
 
 REPC_REPLICA += qremote/SkinCancerDetectorService.rep
 
 HEADERS += \
     src/core/Bot.h \
     src/utils/Settings.h \
-    src/utils/SettingsReader.h
+    src/utils/SettingsReader.h \
+    src/utils/Translator.h
 
 SOURCES += \
     src/core/Bot.cpp \
     src/main.cpp \
     src/utils/Settings.cpp \
-    src/utils/SettingsReader.cpp
+    src/utils/SettingsReader.cpp \
+    src/utils/Translator.cpp
 
 INCLUDEPATH += src/
 

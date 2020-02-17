@@ -27,7 +27,6 @@ void Bot::start()
 
 void Bot::onNewMessage(TelegramBotUpdate const& update)
 {
-    qCDebug(QLC_BOT) << update->message->text << update->message->chat.username << update->message->from.languageCode;
 }
 
 void Bot::createComponents()

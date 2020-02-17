@@ -31,7 +31,7 @@ private:
     void connectToTelegram(QString const& token);
 
 private:
-    utils::Settings m_settings;
+    utils::Settings m_settings{};
 
     TelegramBot* m_telegram = nullptr;
     SkinCancerDetectorServiceReplica* m_scdService = nullptr;
