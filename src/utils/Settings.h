@@ -3,6 +3,8 @@
 #include <QUrl>
 #include <QString>
 
+#include <QDebug>
+
 namespace utils
 {
 /**
@@ -73,4 +75,6 @@ private:
     QString m_translationsDir{};
     QString m_defaultLanguage{};
 };
+
+QDebug operator<<(QDebug d, Settings const& obj);
 }

@@ -1,3 +1,0 @@
-[submodule "third-party/telegrambot"]
-	path = third-party/telegrambot
-	url = https://github.com/kusstas/telegrambotlib-qt.git

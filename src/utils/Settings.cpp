@@ -1,5 +1,6 @@
 #include "Settings.h"
 
+
 namespace utils
 {
 bool Settings::valid() const
@@ -49,5 +50,24 @@ void Settings::setTranslationsDir(QString const& translationsDir)
 void Settings::setDefaultLanguage(QString const& defaultLanguage)
 {
     m_defaultLanguage = defaultLanguage;
+}
+
+QDebug operator<<(QDebug d, Settings const& obj)
+{
+    if (!obj.valid())
+    {
+        d << "Settings(invalid)";
+    }
+    else
+    {
+        d << "Settings("
+          << "telegramToken:" << obj.telegramToken()
+          << "serviceUrl:" << obj.serviceUrl()
+          << "translationsDir:" << obj.translationsDir()
+          << "defaultLanguage:" << obj.defaultLanguage()
+          << ")";
+    }
+
+    return d;
 }
 }
