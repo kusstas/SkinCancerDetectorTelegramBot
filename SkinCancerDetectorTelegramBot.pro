@@ -1,12 +1,11 @@
 QT -= gui
 QT += remoteobjects sql
 
-CONFIG += c++14 console
+CONFIG += c++17 console
 CONFIG -= app_bundle
 CONFIG += file_copies
 
 DEFINES += QT_DEPRECATED_WARNINGS
-
 
 include(thirdparty/telegrambot/telegrambotlib-qt.pri)
 
@@ -27,10 +26,13 @@ SOURCES += \
 
 INCLUDEPATH += src/
 
-COPIES += resources_files
+COPIES += setttings_file translation_files
 
-resources_files.files = $$files($$PWD/resources/*)
-resources_files.path = $$OUT_PWD
+setttings_file.files = $$PWD/resources/settings.json
+setttings_file.path = $$OUT_PWD
+
+translation_files.files = $$files($$PWD/resources/translations/*)
+translation_files.path = $$OUT_PWD/translations/
 
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
