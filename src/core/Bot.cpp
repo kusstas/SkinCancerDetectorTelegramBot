@@ -9,7 +9,9 @@
 
 
 static constexpr auto SETTINGS_PATH = "settings.json";
-static constexpr auto START_TOKEN = "START";
+static constexpr auto START_KEY = "/start";
+static constexpr auto HELP_KEY = "/help";
+static constexpr auto REPORT_KEY = "/report";
 
 namespace core
 {
@@ -28,13 +30,19 @@ void Bot::start()
 
 void Bot::onMessage(TelegramBotUpdate const& update)
 {
-    if (update->type != TelegramBotMessageType::Message || update->message == nullptr)
+    switch (update->type)
     {
-        qCWarning(QLC_BOT) << "Received not message update:" << update->type;
-        return;
+    case TelegramBotMessageType::Message:
+        handleMessage(*update->message);
+        break;
+    case TelegramBotMessageType::CallbackQuery:
+        handleCallback(*update->callbackQuery);
+        break;
+    default:
+        qCWarning(QLC_BOT) << "Received not hadnled update:" << update->type;
+        break;
     }
 
-    handleMessage(update->message);
 }
 
 void Bot::createComponents()
@@ -52,9 +60,11 @@ void Bot::createComponents()
         qCInfo(QLC_BOT) << m_settings;
     }
 
-    m_translator.reset(new utils::Translator(m_settings.translationsDir(), m_settings.defaultLanguage()));
     connectToScdService(m_settings.serviceUrl());
     connectToTelegram(m_settings.telegramToken());
+
+    m_botTalker = std::move(std::make_unique<BotTalker>(m_telegram,
+                                                        std::make_shared<utils::Translator>(m_settings.translationsDir(), m_settings.defaultLanguage())));
 }
 
 void Bot::connectToScdService(QUrl const& url)
@@ -94,43 +104,88 @@ void Bot::connectToScdService(QUrl const& url)
 void Bot::connectToTelegram(QString const& token)
 {
     m_telegram = new TelegramBot(token, this);
+    m_me = m_telegram->getMe();
+
     connect(m_telegram, &TelegramBot::newMessage, this, &Bot::onMessage);
+
+    m_messageHandlers =
+    {
+        {START_KEY, &Bot::onStart},
+        {HELP_KEY, &Bot::onHelp},
+        {REPORT_KEY, &Bot::onReport}
+    };
 }
 
-void Bot::handleMessage(TelegramBotMessage const* message)
+void Bot::handleMessage(TelegramBotMessage const& message)
 {
-    qCInfo(QLC_BOT) << "Receive message from:" << message->from.username;
+    qCInfo(QLC_BOT) << "Receive message from:" << message.from.username;
 
-    if (!message->document.fileId.isEmpty())
+    if (!message.document.fileId.isEmpty())
     {
-        handleDocumentMessage(message->document, message->from);
     }
-    else if (!message->photo.isEmpty())
+    else if (!message.photo.isEmpty())
     {
-        handlePhotoMessage(message->photo, message->from);
     }
-    else if (!message->text.isEmpty())
+    else if (!message.text.isEmpty())
     {
-        handleTextMessage(message->text, message->from);
+        bool handled = false;
+
+        for (auto const& handler : m_messageHandlers)
+        {
+            if (message.text.startsWith(handler.key))
+            {
+                (this->*handler.handler)(message);
+                handled = true;
+                break;
+            }
+        }
+
+        if (!handled)
+        {
+            m_botTalker->undefined(message);
+        }
     }
     else
     {
-        qCWarning(QLC_BOT) << "Receive unhandled message from chat:" << message->chat.id;
+        qCWarning(QLC_BOT) << "Receive unhandled message from chat:" << message.chat.id;
     }
 }
 
-void Bot::handleDocumentMessage(TelegramBotDocument const& document, TelegramBotUser const& from)
+void Bot::handleCallback(TelegramBotCallbackQuery const& callback)
 {
+    auto response = m_helper.parseReportCallback(callback.data);
 
+    if (response.valid)
+    {
+        m_botTalker->successReport(callback.message);
+        // TODO: write to db
+    }
+    else
+    {
+        m_botTalker->failedReport(callback.message);
+    }
 }
 
-void Bot::handlePhotoMessage(QList<TelegramBotPhotoSize> const& photos, TelegramBotUser const& from)
+void Bot::onStart(TelegramBotMessage const& message)
 {
-
+    m_botTalker->hello(message);
 }
 
-void Bot::handleTextMessage(QString const& text, TelegramBotUser const& from)
+void Bot::onHelp(TelegramBotMessage const& message)
 {
+    m_botTalker->help(message);
+}
 
+void Bot::onReport(TelegramBotMessage const& message)
+{
+    if (message.replyToMessage.text.isEmpty() || message.replyToMessage.from.id != m_me.id)
+    {
+        m_botTalker->invalidReport(message);
+    }
+    else
+    {
+        auto callbacks = m_helper.makeCallbacks(message.replyToMessage.messageId);
+        m_botTalker->report(message, callbacks.trueCallback, callbacks.falseCallback);
+    }
 }
 }

@@ -1,4 +1,4 @@
 {
-    "START" : "start",
-    "HELP" : "help"
+    "START" : "Hello %1, I'm bot which can predict cancer skin",
+    "HELP" : "Help message, /help - help"
 }

@@ -1,20 +1,25 @@
 #pragma once
 
 #include <QObject>
+#include <QList>
+
 #include <rep_SkinCancerDetectorService_replica.h>
 
 #include <memory>
 
+#include <telegrambot.h>
+
 #include "utils/Settings.h"
-#include "utils/Translator.h"
-#include "telegrambot.h"
+#include "utils/BotHelper.h"
+#include "BotTalker.h"
 
 
-class TelegramBot;
 class SkinCancerDetectorServiceReplica;
 
 namespace core
 {
+class BotTalker;
+
 class Bot : public QObject
 {
     Q_OBJECT
@@ -27,20 +32,35 @@ private slots:
     void onMessage(TelegramBotUpdate const& update);
 
 private:
+    struct MessageHandler
+    {
+        using Handler = void (Bot::*)(TelegramBotMessage const&);
+
+        QString key{};
+        Handler handler = nullptr;
+    };
+
+private:
     void createComponents();
     void connectToScdService(QUrl const& url);
     void connectToTelegram(QString const& token);
 
-    void handleMessage(TelegramBotMessage const* message);
-    void handleDocumentMessage(TelegramBotDocument const& document, TelegramBotUser const& from);
-    void handlePhotoMessage(QList<TelegramBotPhotoSize> const& photos, TelegramBotUser const& from);
-    void handleTextMessage(QString const& text, TelegramBotUser const& from);
+    void handleMessage(TelegramBotMessage const& message);
+    void handleCallback(TelegramBotCallbackQuery const& callback);
+
+    void onStart(TelegramBotMessage const& message);
+    void onHelp(TelegramBotMessage const& message);
+    void onReport(TelegramBotMessage const& message);
 
 private:
+    utils::BotHelper m_helper{};
     utils::Settings m_settings{};
-    std::unique_ptr<utils::Translator> m_translator = nullptr;
 
     TelegramBot* m_telegram = nullptr;
+    TelegramBotUser m_me{};
     SkinCancerDetectorServiceReplica* m_scdService = nullptr;
+    std::unique_ptr<BotTalker> m_botTalker = nullptr;
+
+    QList<MessageHandler> m_messageHandlers{};
 };
 }

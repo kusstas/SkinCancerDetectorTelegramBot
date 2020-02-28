@@ -63,7 +63,14 @@ Translator::Translator(QString const& dir, QString const& defaultCode)
 
 QString Translator::get(QString const& token, QString const& languageCode) const
 {
-    return m_data.value(languageCode, m_defaultData).value(token, token).toString();
+    auto const& dict = m_data.value(languageCode, m_defaultData);
+
+    if (dict.contains(token))
+    {
+        return dict.value(token, token).toString();
+    }
+
+    return m_defaultData.value(token, token).toString();
 }
 
 QList<QFileInfo> Translator::getFiles(QString const& path) const
