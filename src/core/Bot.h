@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QList>
+#include <QHash>
 
 #include <rep_SkinCancerDetectorService_replica.h>
 
@@ -13,8 +14,6 @@
 #include "utils/BotHelper.h"
 #include "BotTalker.h"
 
-
-class SkinCancerDetectorServiceReplica;
 
 namespace core
 {
@@ -28,9 +27,6 @@ public:
 
     void start();
 
-private slots:
-    void onMessage(TelegramBotUpdate const& update);
-
 private:
     struct MessageHandler
     {
@@ -40,11 +36,14 @@ private:
         Handler handler = nullptr;
     };
 
+    using Requests = QHash<quint64, TelegramBotUpdate>;
+
 private:
     void createComponents();
     void connectToScdService(QUrl const& url);
     void connectToTelegram(QString const& token);
 
+    void onMessage(TelegramBotUpdate const& update);
     void handleMessage(TelegramBotMessage const& message);
     void handleCallback(TelegramBotCallbackQuery const& callback);
 
@@ -62,5 +61,6 @@ private:
     std::unique_ptr<BotTalker> m_botTalker = nullptr;
 
     QList<MessageHandler> m_messageHandlers{};
+    Requests m_requests{};
 };
 }

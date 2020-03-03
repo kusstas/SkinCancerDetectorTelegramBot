@@ -15,6 +15,7 @@ HEADERS += \
     src/core/Bot.h \
     src/core/BotTalker.h \
     src/utils/BotHelper.h \
+    src/utils/Downloader.h \
     src/utils/Settings.h \
     src/utils/SettingsReader.h \
     src/utils/Translator.h
@@ -24,6 +25,7 @@ SOURCES += \
     src/core/BotTalker.cpp \
     src/main.cpp \
     src/utils/BotHelper.cpp \
+    src/utils/Downloader.cpp \
     src/utils/Settings.cpp \
     src/utils/SettingsReader.cpp \
     src/utils/Translator.cpp

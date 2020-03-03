@@ -3,7 +3,6 @@
 #include <QLoggingCategory>
 
 #include <QRemoteObjectNode>
-#include <rep_SkinCancerDetectorService_replica.h>
 
 #include "utils/SettingsReader.h"
 
@@ -28,23 +27,6 @@ void Bot::start()
     m_telegram->startMessagePulling();
 }
 
-void Bot::onMessage(TelegramBotUpdate const& update)
-{
-    switch (update->type)
-    {
-    case TelegramBotMessageType::Message:
-        handleMessage(*update->message);
-        break;
-    case TelegramBotMessageType::CallbackQuery:
-        handleCallback(*update->callbackQuery);
-        break;
-    default:
-        qCWarning(QLC_BOT) << "Received not hadnled update:" << update->type;
-        break;
-    }
-
-}
-
 void Bot::createComponents()
 {
     m_settings = utils::SettingsReader().read(SETTINGS_PATH);
@@ -63,8 +45,8 @@ void Bot::createComponents()
     connectToScdService(m_settings.serviceUrl());
     connectToTelegram(m_settings.telegramToken());
 
-    m_botTalker = std::move(std::make_unique<BotTalker>(m_telegram,
-                                                        std::make_shared<utils::Translator>(m_settings.translationsDir(), m_settings.defaultLanguage())));
+    auto const translator = std::make_shared<utils::Translator>(m_settings.translationsDir(), m_settings.defaultLanguage());
+    m_botTalker = std::make_unique<BotTalker>(m_telegram, translator);
 }
 
 void Bot::connectToScdService(QUrl const& url)
@@ -103,6 +85,8 @@ void Bot::connectToScdService(QUrl const& url)
 
 void Bot::connectToTelegram(QString const& token)
 {
+    qCInfo(QLC_BOT) << "Trying connect to telegram";
+
     m_telegram = new TelegramBot(token, this);
     m_me = m_telegram->getMe();
 
@@ -114,6 +98,24 @@ void Bot::connectToTelegram(QString const& token)
         {HELP_KEY, &Bot::onHelp},
         {REPORT_KEY, &Bot::onReport}
     };
+
+    qCInfo(QLC_BOT) <<  "Connect to telegram successfully";
+}
+
+void Bot::onMessage(TelegramBotUpdate const& update)
+{
+    switch (update->type)
+    {
+    case TelegramBotMessageType::Message:
+        handleMessage(*update->message);
+        break;
+    case TelegramBotMessageType::CallbackQuery:
+        handleCallback(*update->callbackQuery);
+        break;
+    default:
+        qCWarning(QLC_BOT) << "Received not handled update:" << update->type;
+        break;
+    }
 }
 
 void Bot::handleMessage(TelegramBotMessage const& message)
@@ -178,6 +180,7 @@ void Bot::onHelp(TelegramBotMessage const& message)
 
 void Bot::onReport(TelegramBotMessage const& message)
 {
+    // TODO: check exist key in db
     if (message.replyToMessage.text.isEmpty() || message.replyToMessage.from.id != m_me.id)
     {
         m_botTalker->invalidReport(message);
