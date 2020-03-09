@@ -3,6 +3,7 @@
 #include <memory>
 
 #include <telegrambot.h>
+#include <rep_SkinCancerDetectorService_replica.h>
 
 #include "utils/Translator.h"
 
@@ -19,7 +20,11 @@ public:
     void report(TelegramBotMessage const& message, QString const& trueCallback, QString const& falseCallback) const;
     void invalidReport(TelegramBotMessage const& message);
     void failedReport(TelegramBotMessage const& message);
-    void successReport(TelegramBotMessage const& message);
+    void successReport(TelegramBotMessage const& message); 
+    void oversize(TelegramBotMessage const& message);
+    void inProgress(TelegramBotMessage const& message);
+    void scdSuccess(TelegramBotMessage const& message, bool result, int replyTo = 0, TelegramBotMessage* response = nullptr);
+    void scdFailed(TelegramBotMessage const& message, SkinCancerDetectorServiceReplica::ErrorType error, int replyTo = 0);
 
 private:
     TelegramBot* m_telegram = nullptr;

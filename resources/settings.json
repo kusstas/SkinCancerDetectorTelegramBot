@@ -2,5 +2,8 @@
     "telegramToken" : "823864331:AAEkJkvVvxwaR31x38GcAPvx0AdUjv7tbrY",
     "serviceUrl" : "local:skin_cancer_detector",
     "translationsDir" : "translations",
-    "defaultLanguage" : "en"
+    "defaultLanguage" : "en",
+    "maxFileSize" : 12582912,
+    "dataFolder" : "data",
+    "databaseName" : "handles.db"
 }

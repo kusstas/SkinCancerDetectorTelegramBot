@@ -1,16 +1,20 @@
 #include "Bot.h"
 
 #include <QLoggingCategory>
+#include <QDir>
 
 #include <QRemoteObjectNode>
 
 #include "utils/SettingsReader.h"
+#include "database/IDbCommunicationHandler.h"
 
 
 static constexpr auto SETTINGS_PATH = "settings.json";
 static constexpr auto START_KEY = "/start";
 static constexpr auto HELP_KEY = "/help";
 static constexpr auto REPORT_KEY = "/report";
+static constexpr auto DOWNLOAD_URL_FORMAT = "https://api.telegram.org/file/bot%1/%2";
+static constexpr auto INFO_WAIT_MS = 1000;
 
 namespace core
 {
@@ -30,6 +34,7 @@ void Bot::start()
 void Bot::createComponents()
 {
     m_settings = utils::SettingsReader().read(SETTINGS_PATH);
+    m_urlDownloadFormat = QString(DOWNLOAD_URL_FORMAT).arg(m_settings.telegramToken());
 
     if (!m_settings.valid())
     {
@@ -44,9 +49,18 @@ void Bot::createComponents()
 
     connectToScdService(m_settings.serviceUrl());
     connectToTelegram(m_settings.telegramToken());
+    connect(&m_downloader, &utils::Downloader::complete, this, &Bot::onDownloadComplete);
+    connect(m_scdService, &SkinCancerDetectorServiceReplica::resultReady, this, &Bot::onScdResultReady);
+    connect(m_scdService, &SkinCancerDetectorServiceReplica::resultFailed, this, &Bot::onScdResultFailed);
 
     auto const translator = std::make_shared<utils::Translator>(m_settings.translationsDir(), m_settings.defaultLanguage());
     m_botTalker = std::make_unique<BotTalker>(m_telegram, translator);
+
+
+    if (!QDir(m_settings.dataFolder()).exists())
+    {
+        QDir::current().mkdir(m_settings.dataFolder());
+    }
 }
 
 void Bot::connectToScdService(QUrl const& url)
@@ -107,7 +121,7 @@ void Bot::onMessage(TelegramBotUpdate const& update)
     switch (update->type)
     {
     case TelegramBotMessageType::Message:
-        handleMessage(*update->message);
+        handleMessage(update);
         break;
     case TelegramBotMessageType::CallbackQuery:
         handleCallback(*update->callbackQuery);
@@ -118,15 +132,19 @@ void Bot::onMessage(TelegramBotUpdate const& update)
     }
 }
 
-void Bot::handleMessage(TelegramBotMessage const& message)
+void Bot::handleMessage(TelegramBotUpdate const& update)
 {
+    auto const& message = *update->message;
+
     qCInfo(QLC_BOT) << "Receive message from:" << message.from.username;
 
     if (!message.document.fileId.isEmpty())
     {
+        handle(getRequestId(), message.document.fileId, update);
     }
     else if (!message.photo.isEmpty())
     {
+        handle(getRequestId(), message.photo.last().fileId, update);
     }
     else if (!message.text.isEmpty())
     {
@@ -160,7 +178,8 @@ void Bot::handleCallback(TelegramBotCallbackQuery const& callback)
     if (response.valid)
     {
         m_botTalker->successReport(callback.message);
-        // TODO: write to db
+        m_dbCommunicationHandler->addUserReport(db::DbKey{callback.id.toInt(), response.reportedMessageId},
+                                                QVariant(response.report).toString());
     }
     else
     {
@@ -180,8 +199,9 @@ void Bot::onHelp(TelegramBotMessage const& message)
 
 void Bot::onReport(TelegramBotMessage const& message)
 {
-    // TODO: check exist key in db
-    if (message.replyToMessage.text.isEmpty() || message.replyToMessage.from.id != m_me.id)
+    if (message.replyToMessage.text.isEmpty()
+            || message.replyToMessage.from.id != m_me.id
+            || !m_dbCommunicationHandler->exist({message.chat.id, message.replyToMessage.messageId}))
     {
         m_botTalker->invalidReport(message);
     }
@@ -190,5 +210,83 @@ void Bot::onReport(TelegramBotMessage const& message)
         auto callbacks = m_helper.makeCallbacks(message.replyToMessage.messageId);
         m_botTalker->report(message, callbacks.trueCallback, callbacks.falseCallback);
     }
+}
+
+void Bot::handle(quint64 id, QString const& fileId, TelegramBotUpdate const& update)
+{
+    auto const& file = m_telegram->getFile(fileId);
+
+    if (file.fileSize > m_settings.maxFileSize())
+    {
+        m_botTalker->oversize(*update->message);
+        return;
+    }
+
+    m_botTalker->inProgress(*update->message);
+
+    QUrl const url(m_urlDownloadFormat.arg(file.filePath));
+
+    m_requests.insert(id, {update, file});
+    m_downloader.download(id, url);
+}
+
+void Bot::onDownloadComplete(quint64 id, QByteArray const& data)
+{
+    if (!data.isEmpty())
+    {
+        auto const& requestData = m_requests[id];
+        auto scdRequestInfoReply = m_scdService->request(data);
+
+        if(scdRequestInfoReply.waitForFinished(INFO_WAIT_MS))
+        {
+            auto const& scdRequestInfo = scdRequestInfoReply.returnValue();
+            m_scdRequests.insert(scdRequestInfo.id(), {requestData, data, scdRequestInfo});
+        }
+        else
+        {
+            m_botTalker->scdFailed(*requestData.update->message,
+                                   SkinCancerDetectorServiceReplica::System,
+                                   requestData.update->message->messageId);
+        }
+    }
+    m_requests.remove(id);
+}
+
+void Bot::onScdResultReady(quint64 id, SkinCancerDetectorResult const& result)
+{
+    auto const& requestInfo = m_scdRequests.take(id);
+
+    TelegramBotMessage response;
+    m_botTalker->scdSuccess(*requestInfo.request.update->message,
+                            result.positive() > result.negative(),
+                            requestInfo.request.update->message->messageId,
+                            &response);
+
+    if (response.messageId > 0)
+    {
+        QFileInfo fileInfo(requestInfo.request.file.filePath);
+        QString fileName = QString::number(requestInfo.request.update->message->chat.id) + fileInfo.fileName();
+        QFile file(QDir(m_settings.dataFolder()).filePath(fileName));
+
+        if (file.open(QFile::WriteOnly))
+        {
+            file.write(requestInfo.data);
+            file.close();
+
+            // TODO: write to db
+        }
+    }
+}
+
+void Bot::onScdResultFailed(quint64 id, SkinCancerDetectorServiceReplica::ErrorType error)
+{
+    auto const& requestInfo = m_scdRequests[id];
+    m_botTalker->scdFailed(*requestInfo.request.update->message, error, requestInfo.request.update->message->messageId);
+    m_scdRequests.remove(id);
+}
+
+quint64 Bot::getRequestId()
+{
+    return ++m_requestsId;
 }
 }

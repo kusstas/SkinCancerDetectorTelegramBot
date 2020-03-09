@@ -9,7 +9,10 @@ bool Settings::valid() const
             && serviceUrl().isValid()
             && !serviceUrl().isEmpty()
             && !translationsDir().isEmpty()
-            && !defaultLanguage().isEmpty();
+            && !defaultLanguage().isEmpty()
+            && maxFileSize() > 0
+            && !dataFolder().isEmpty()
+            && !databaseName().isEmpty();
 }
 
 QString const& Settings::telegramToken() const
@@ -32,6 +35,21 @@ QString const& Settings::defaultLanguage() const
     return m_defaultLanguage;
 }
 
+int Settings::maxFileSize() const
+{
+    return m_maxFileSize;
+}
+
+QString Settings::dataFolder() const
+{
+    return m_dataFolder;
+}
+
+QString Settings::databaseName() const
+{
+    return m_databaseName;
+}
+
 void Settings::setTelegramToken(QString const& telegramToken)
 {
     m_telegramToken = telegramToken;
@@ -52,6 +70,21 @@ void Settings::setDefaultLanguage(QString const& defaultLanguage)
     m_defaultLanguage = defaultLanguage;
 }
 
+void Settings::setMaxFileSize(int maxFileSize)
+{
+    m_maxFileSize = maxFileSize;
+}
+
+void Settings::setDataFolder(QString const& dataFolder)
+{
+    m_dataFolder = dataFolder;
+}
+
+void Settings::setDatabaseName(QString const& databaseName)
+{
+    m_databaseName = databaseName;
+}
+
 QDebug operator<<(QDebug d, Settings const& obj)
 {
     if (!obj.valid())
@@ -65,6 +98,9 @@ QDebug operator<<(QDebug d, Settings const& obj)
           << "serviceUrl:" << obj.serviceUrl()
           << "translationsDir:" << obj.translationsDir()
           << "defaultLanguage:" << obj.defaultLanguage()
+          << "maxFileSize:" << obj.maxFileSize()
+          << "dataFolder:" << obj.dataFolder()
+          << "databaseName:" << obj.databaseName()
           << ")";
     }
 

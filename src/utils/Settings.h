@@ -46,6 +46,24 @@ public:
     QString const& defaultLanguage() const;
 
     /**
+     * @brief max file size for download
+     * @return
+     */
+    int maxFileSize() const;
+
+    /**
+     * @brief data folder for save files
+     * @return
+     */
+    QString dataFolder() const;
+
+    /**
+     * @brief database name
+     * @return
+     */
+    QString databaseName() const;
+
+    /**
      * @brief set telegram token
      * @param telegramToken
      */
@@ -69,11 +87,29 @@ public:
      */
     void setDefaultLanguage(QString const& defaultLanguage);
 
+    /**
+     * @brief set max file size
+     */
+    void setMaxFileSize(int maxFileSize);
+
+    /**
+     * @brief set data folder
+     */
+    void setDataFolder(QString const& dataFolder);
+
+    /**
+     * @brief set database name
+     */
+    void setDatabaseName(QString const& databaseName);
+
 private:
     QString m_telegramToken{};
     QUrl m_serviceUrl{};
     QString m_translationsDir{};
     QString m_defaultLanguage{};
+    int m_maxFileSize = 0;
+    QString m_dataFolder{};
+    QString m_databaseName{};
 };
 
 QDebug operator<<(QDebug d, Settings const& obj);

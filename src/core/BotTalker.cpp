@@ -12,9 +12,17 @@ static constexpr auto REPORT_TOKEN = "REPORT";
 static constexpr auto INVALID_REPORT_TOKEN = "INVALID_REPORT";
 static constexpr auto FAILED_REPORT_TOKEN = "FAILED_REPORT";
 static constexpr auto SUCCESS_REPORT_TOKEN = "SUCCESS_REPORT";
+static constexpr auto OVERSIZE_TOKEN = "OVERSIZE";
+static constexpr auto IN_PROGRESS_TOKEN = "IN_PROGRESS";
 static constexpr auto TRUE_REPORT_TOKEN = "TRUE_REPORT";
 static constexpr auto FALSE_REPORT_TOKEN = "FALSE_REPORT";
 static constexpr auto UNDEF_TOKEN = "UNDEFINED";
+static constexpr auto EMPTY_FILE_TOKEN = "EMPTY_FILE";
+static constexpr auto GRAY_IMAGE_TOKEN = "GRAY_IMAGE";
+static constexpr auto TOO_SMALL_SIZE_TOKEN = "TOO_SMALL_SIZE";
+static constexpr auto WRONG_FORMAT_TOKEN = "WRONG_FORMAT";
+static constexpr auto POSITIVE_TOKEN = "POSITIVE";
+static constexpr auto NEGATIVE_TOKEN = "NEGATIVE";
 
 BotTalker::BotTalker(TelegramBot* telegram, std::shared_ptr<utils::Translator> const& translator)
 {
@@ -71,15 +79,65 @@ void BotTalker::invalidReport(TelegramBotMessage const& message)
                             m_translator->get(INVALID_REPORT_TOKEN, message.from.languageCode));
 }
 
-void BotTalker::failedReport(const TelegramBotMessage& message)
+void BotTalker::failedReport(TelegramBotMessage const& message)
 {
     m_telegram->sendMessage(message.chat.id,
                             m_translator->get(FAILED_REPORT_TOKEN, message.from.languageCode));
 }
 
-void BotTalker::successReport(const TelegramBotMessage& message)
+void BotTalker::successReport(TelegramBotMessage const& message)
 {
     m_telegram->sendMessage(message.chat.id,
                             m_translator->get(SUCCESS_REPORT_TOKEN, message.from.languageCode));
+}
+
+void BotTalker::oversize(TelegramBotMessage const& message)
+{
+    m_telegram->sendMessage(message.chat.id,
+                            m_translator->get(OVERSIZE_TOKEN, message.from.languageCode));
+}
+
+void BotTalker::inProgress(TelegramBotMessage const& message)
+{
+    m_telegram->sendMessage(message.chat.id,
+                            m_translator->get(IN_PROGRESS_TOKEN, message.from.languageCode));
+}
+
+void BotTalker::scdSuccess(TelegramBotMessage const& message, bool result, int replyTo, TelegramBotMessage* response)
+{
+    m_telegram->sendMessage(message.chat.id,
+                            m_translator->get(result ? POSITIVE_TOKEN : NEGATIVE_TOKEN, message.from.languageCode),
+                            replyTo,
+                            TelegramBot::TelegramFlags::NoFlag,
+                            {},
+                            response);
+}
+
+void BotTalker::scdFailed(TelegramBotMessage const& message, SkinCancerDetectorServiceReplica::ErrorType error, int replyTo)
+{
+    QString key;
+
+    switch (error)
+    {
+    case SkinCancerDetectorServiceReplica::DataIsEmpty:
+        key = EMPTY_FILE_TOKEN;
+        break;
+    case SkinCancerDetectorServiceReplica::ImpossibleDecode:
+        key = WRONG_FORMAT_TOKEN;
+        break;
+    case SkinCancerDetectorServiceReplica::MismatchCountChannels:
+        key = GRAY_IMAGE_TOKEN;
+        break;
+    case SkinCancerDetectorServiceReplica::TooSmallImageSize:
+        key = TOO_SMALL_SIZE_TOKEN;
+        break;
+    default:
+        break;
+    }
+
+    m_telegram->sendMessage(message.chat.id,
+                            m_translator->get(key, message.from.languageCode),
+                            replyTo,
+                            TelegramBot::TelegramFlags::NoFlag);
 }
 }

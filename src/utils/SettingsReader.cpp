@@ -43,8 +43,12 @@ Settings SettingsReader::read(QString const& path) const
     auto const SERVICE_KEY = "serviceUrl";
     auto const TR_DIR_KEY = "translationsDir";
     auto const DEFAULT_LANGUAGE_KEY = "defaultLanguage";
+    auto const MAX_FILE_SIZE_KEY = "maxFileSize";
+    auto const DATA_FOLDER_KEY = "dataFolder";
+    auto const DATABASE_NAME_KEY = "databaseName";
 
-    if (!checkRequirements(&root, {TOKEN_KEY, SERVICE_KEY, TR_DIR_KEY, DEFAULT_LANGUAGE_KEY}))
+    if (!checkRequirements(&root,
+        {TOKEN_KEY, SERVICE_KEY, TR_DIR_KEY, DEFAULT_LANGUAGE_KEY, MAX_FILE_SIZE_KEY, DATA_FOLDER_KEY, DATABASE_NAME_KEY}))
     {
         return result;
     }
@@ -53,6 +57,9 @@ Settings SettingsReader::read(QString const& path) const
     result.setServiceUrl(QUrl(root[SERVICE_KEY].toString()));
     result.setTranslationsDir(root[TR_DIR_KEY].toString());
     result.setDefaultLanguage(root[DEFAULT_LANGUAGE_KEY].toString());
+    result.setMaxFileSize(root[MAX_FILE_SIZE_KEY].toInt());
+    result.setDataFolder(root[DATA_FOLDER_KEY].toString());
+    result.setDatabaseName(root[DATABASE_NAME_KEY].toString());
 
     return result;
 }

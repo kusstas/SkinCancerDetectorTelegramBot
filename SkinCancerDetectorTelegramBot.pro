@@ -14,6 +14,7 @@ REPC_REPLICA += qremote/SkinCancerDetectorService.rep
 HEADERS += \
     src/core/Bot.h \
     src/core/BotTalker.h \
+    src/database/IDbCommunicationHandler.h \
     src/utils/BotHelper.h \
     src/utils/Downloader.h \
     src/utils/Settings.h \
